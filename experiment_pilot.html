@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <title>Experiment pilot – Framing & Load</title>
+
+  <!-- jsPsych core + pluginuri din CDN (aveți nevoie de internet) -->
+  <script src="https://unpkg.com/jspsych@7.3.3/dist/jspsych.js"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.2.0"></script>
+  <script src="https://unpkg.com/@jspsych/plugin-survey-likert@1.2.0"></script>
+
+  <link href="https://unpkg.com/jspsych@7.3.3/css/jspsych.css" rel="stylesheet" type="text/css" />
+</head>
+<body></body>
+
+<script>
+
+// ========================
+// 1. Inițializare jsPsych
+// ========================
+
+const jsPsych = initJsPsych({
+  on_finish: function() {
+    // Salvăm datele la final (numele fișierului conține ID-ul participantului)
+    const pid = jsPsych.data.get().values()[0].participant_id || "NO_ID";
+    jsPsych.data.get().localSave('csv', 'pilot_data_' + pid + '.csv');
+    jsPsych.endExperiment("Mulțumim! Datele au fost salvate local.");
+  }
+});
+
+// ========================
+// 2. Condițiile între participanți
+// ========================
+
+// Întrebăm participantul cine este
+const participant_id = prompt("Introduceți ID participant (ex. S01, S02):", "S01") || "SXX";
+
+// Atribuim aleator framing și load
+const framing = jsPsych.randomization.sampleWithoutReplacement(['gain', 'loss'], 1)[0];
+const load    = jsPsych.randomization.sampleWithoutReplacement(['low', 'high'], 1)[0];
+
+jsPsych.data.addProperties({
+  participant_id: participant_id,
+  framing: framing,
+  load: load
+});
+
+// ========================
+// 3. Scenarii medicale
+// ========================
+
+const scenarios = [
+  {
+    id: 1,
+    gain: "Tratamentul A are 70% șanse de vindecare completă. Tratamentul B experimental are 40% șanse de vindecare completă.",
+    loss: "Tratamentul A are 30% șanse să nu funcționeze. Tratamentul B experimental are 60% șanse să nu funcționeze."
+  },
+  {
+    id: 2,
+    gain: "Intervenția chirurgicală C are 85% șanse de recuperare completă. Intervenția D este mai riscantă, dar poate avea beneficii suplimentare.",
+    loss: "Intervenția chirurgicală C are 15% risc de complicații severe. Intervenția D este mai riscantă, dar poate avea beneficii suplimentare."
+  },
+  {
+    id: 3,
+    gain: "Vaccinul E reduce riscul de boală cu 60%. Terapia F oferă o șansă mai mare de protecție, dar cu riscuri mai mari de reacții adverse.",
+    loss: "Fără vaccinul E, există 40% risc de a dezvolta boala. Terapia F poate crește protecția, dar cu riscuri crescute de reacții adverse."
+  },
+  {
+    id: 4,
+    gain: "Tratamentul G reduce simptomele la 70% dintre pacienți. Tratamentul H este mai riscant, dar unii pacienți se vindecă complet.",
+    loss: "La 30% dintre pacienți, tratamentul G nu funcționează. Tratamentul H este mai riscant, dar unii pacienți se vindecă complet."
+  },
+  {
+    id: 5,
+    gain: "Terapia I poate preveni recurența bolii în 65% din cazuri. Terapia J are potențial mai mare, dar cu mai multe incertitudini.",
+    loss: "Terapia I nu previne recurența în 35% din cazuri. Terapia J poate fi mai eficientă, dar cu mai multe incertitudini."
+  },
+  {
+    id: 6,
+    gain: "Procedura K are 90% șanse de succes. Procedura L este mai agresivă, dar uneori aduce beneficii suplimentare.",
+    loss: "Procedura K are 10% șanse de eșec. Procedura L este mai agresivă, dar uneori aduce beneficii suplimentare."
+  },
+  {
+    id: 7,
+    gain: "Medicamentul M îmbunătățește calitatea vieții în 75% din cazuri. Medicamentul N este mai nou și posibil mai eficient, dar cu riscuri suplimentare.",
+    loss: "La 25% dintre pacienți, medicamentul M nu îmbunătățește calitatea vieții. Medicamentul N este mai nou și posibil mai eficient, dar cu riscuri suplimentare."
+  },
+  {
+    id: 8,
+    gain: "Radioterapia O elimină tumora în 55% din cazuri. O combinație mai riscantă de tratamente poate crește această șansă.",
+    loss: "Radioterapia O nu elimină tumora în 45% din cazuri. O combinație mai riscantă de tratamente poate crește această șansă."
+  },
+  {
+    id: 9,
+    gain: "O procedură minim invazivă reduce necesitatea operației în 80% din cazuri. O procedură alternativă mai riscantă ar putea elimina complet nevoia de operație.",
+    loss: "În 20% din cazuri, procedura minim invazivă nu reduce necesitatea operației. O procedură alternativă mai riscantă ar putea elimina complet nevoia de operație."
+  },
+  {
+    id: 10,
+    gain: "Un tratament standard are rezultate stabile în majoritatea cazurilor. Un tratament experimental are șanse mai mari de îmbunătățire majoră.",
+    loss: "Un tratament standard poate să nu aducă îmbunătățiri în unele cazuri. Un tratament experimental este mai riscant, dar poate aduce îmbunătățire majoră."
+  }
+];
+
+// ========================
+// 4. Funcții de trial
+// ========================
+
+// Trial de încărcare cognitivă
+function load_trial() {
+  const digits_low  = "4 9";
+  const digits_high = "8 2 5 9 1 4 7";
+  const digits = (load === 'low') ? digits_low : digits_high;
+
+  return {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<p>Te rugăm să memorezi acest șir de cifre:</p><p><strong>${digits}</strong></p>`,
+    choices: ["Continuă"],
+    data: {
+      task: 'load_memorization',
+      load: load
+    }
+  };
+}
+
+// Trial de decizie (măsurăm alegerea + RT)
+function decision_trial(scen) {
+  const text = (framing === 'gain') ? scen.gain : scen.loss;
+
+  return {
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `<p>${text}</p><p>Ce opțiune ai alege, în această situație?</p>`,
+    choices: ["Opțiune sigură", "Opțiune riscantă"],
+    data: {
+      task: 'decision',
+      scenario_id: scen.id,
+      framing: framing,
+      load: load
+    }
+    // jsPsych va salva automat:
+    // rt (timpul de reacție, în ms)
+    // response (0 = sigur, 1 = riscant)
+  };
+}
+
+// Trial de responsabilitate morală
+function responsibility_trial(scen) {
+  return {
+    type: jsPsychSurveyLikert,
+    preamble: `<p>Te rugăm să evaluezi cum te simți în legătură cu decizia ta din acest scenariu.</p>`,
+    questions: [
+      {
+        prompt: "Cât de responsabil te simți pentru decizia pe care ai luat-o?",
+        labels: ["1 - deloc", "2", "3", "4 - moderat", "5", "6", "7 - foarte mult"],
+        required: true
+      }
+    ],
+    data: {
+      task: 'responsibility',
+      scenario_id: scen.id,
+      framing: framing,
+      load: load
+    }
+  };
+}
+
+// ========================
+// 5. Timeline-ul complet
+// ========================
+
+let timeline = [];
+
+// Instrucțiuni
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <p>Bună! Acesta este un experiment pilot despre luarea deciziilor medicale.</p>
+    <p>Vei avea de memorat un șir de cifre și vei citi scenarii medicale ipotetice.</p>
+    <p>La fiecare scenariu vei alege între o opțiune sigură și una riscantă, apoi vei evalua cum te simți față de decizie.</p>
+    <p>Nu există răspunsuri corecte sau greșite.</p>
+  `,
+  choices: ["Începe"],
+  data: {task: 'instructions'}
+});
+
+// Trialuri pentru fiecare scenariu
+scenarios.forEach(function(scen) {
+  timeline.push(load_trial());
+  timeline.push(decision_trial(scen));
+  timeline.push(responsibility_trial(scen));
+});
+
+// Debriefing
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <p>Acesta a fost sfârșitul experimentului pilot.</p>
+    <p>Scenariile au fost ipotetice, iar scopul este să înțelegem cum influențează încărcarea cognitivă și modul de formulare a informației deciziile medicale.</p>
+    <p>Mulțumim pentru participare!</p>
+  `,
+  choices: ["Încheie"],
+  data: {task: 'debrief'}
+});
+
+// Rulăm experimentul
+jsPsych.run(timeline);
+
+</script>
+</html>
+
