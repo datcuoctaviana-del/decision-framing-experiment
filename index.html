@@ -2,152 +2,248 @@
 <html lang="ro">
 <head>
   <meta charset="UTF-8" />
-  <title>Pilot – Framing × Load (Decizii medicale)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Încărcare cognitivă × Framing × Decizie medicală (Pilot)</title>
 
-  <!-- jsPsych + plugin-uri prin CDN (fără instalare locală) -->
-<script src="https://cdn.jsdelivr.net/npm/jspsych@7.3.4"></script>
+  <!-- jsPsych core (LOCAL) -->
+  <script src="jspsych/jspsych.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-button-response@1.2.0"></script>
-<script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-html-keyboard-response@1.2.0"></script>
-<script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-survey-likert@1.2.0"></script>
-<script src="https://cdn.jsdelivr.net/npm/@jspsych/plugin-survey-text@1.2.0"></script>
+  <!-- plugins (LOCAL) -->
+  <script src="jspsych/plugin-html-keyboard-response.js"></script>
+  <script src="jspsych/plugin-html-button-response.js"></script>
+  <script src="jspsych/plugin-survey-likert.js"></script>
+  <script src="jspsych/plugin-survey-text.js"></script>
 
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jspsych@7.3.4/css/jspsych.css">
-  
+  <!-- CSS (LOCAL) -->
+  <link rel="stylesheet" href="jspsych/jspsych.css"/>
 
   <style>
-    #jspsych-content{ max-width:720px; }
-    .jspsych-btn{ font-size:18px; padding:12px 18px; margin-top:10px; width:100%; max-width:360px; }
+    #jspsych-content { max-width: 800px; }
+    .btnwide .jspsych-btn { width: 100%; max-width: 420px; font-size: 18px; padding: 12px 16px; }
+    .big { font-size: 22px; }
+    .digits { font-size: 34px; letter-spacing: 4px; }
+    .note { font-size: 14px; opacity: 0.85; }
+    .warn { background: #fff3cd; padding: 10px 12px; border-radius: 10px; }
   </style>
 </head>
+
 <body></body>
 
 <script>
-  // 1) init
-  const jsPsych = initJsPsych({
-    on_finish: () => {
-      const d = jsPsych.data.get();
-      const pid = (d.values()[0] && d.values()[0].participant_id) ? d.values()[0].participant_id : "NOID";
-      d.localSave("csv", `pilot_${pid}.csv`);
-      alert("Gata! CSV a fost descărcat (Downloads).");
-    }
-  });
-
-  // 2) condiții: random (simplu)
-  const framing = jsPsych.randomization.sampleWithoutReplacement(["gain","loss"], 1)[0];
-  const load    = jsPsych.randomization.sampleWithoutReplacement(["low","high"], 1)[0];
-  jsPsych.data.addProperties({ framing, load });
-
-  // 3) scenarii (10) – gain/loss
-  const scenarios = [
-    {id:1, gain:"Standard: salvează 70/100. Experimental: 40% salvează 100/100, 60% salvează 0/100.",
-          loss:"Standard: mor 30/100. Experimental: 40% mor 0/100, 60% mor 100/100."},
-    {id:2, gain:"Standard: rezultat bun 80/100. Alternativ: 30% bun 100/100, 70% bun 0/100.",
-          loss:"Standard: rezultat rău 20/100. Alternativ: 30% rău 0/100, 70% rău 100/100."},
-    {id:3, gain:"Standard: ameliorare 65/100. Nou: 25% ameliorare 100/100, 75% ameliorare 0/100.",
-          loss:"Standard: fără ameliorare 35/100. Nou: 25% fără ameliorare 0/100, 75% fără ameliorare 100/100."},
-    {id:4, gain:"Standard: îmbunătățire 75/100. Experimental: 35% îmbunătățire 100/100, 65% îmbunătățire 0/100.",
-          loss:"Standard: fără îmbunătățire 25/100. Experimental: 35% fără îmbunătățire 0/100, 65% fără îmbunătățire 100/100."},
-    {id:5, gain:"Standard: previne complicații 70/100. Alternativ: 20% previne 100/100, 80% previne 0/100.",
-          loss:"Standard: complicații 30/100. Alternativ: 20% complicații 0/100, 80% complicații 100/100."},
-    {id:6, gain:"Standard: ameliorare 60/100. Agresiv: 30% ameliorare 100/100, 70% ameliorare 0/100.",
-          loss:"Standard: fără ameliorare 40/100. Agresiv: 30% fără ameliorare 0/100, 70% fără ameliorare 100/100."},
-    {id:7, gain:"Standard: stabilitate 85/100. Alternativ: 15% stabilitate 100/100, 85% stabilitate 0/100.",
-          loss:"Standard: instabilitate 15/100. Alternativ: 15% instabilitate 0/100, 85% instabilitate 100/100."},
-    {id:8, gain:"Standard: reduce riscul la 70/100. B: 25% reduce la 100/100, 75% reduce la 0/100.",
-          loss:"Standard: eveniment negativ 30/100. B: 25% eveniment 0/100, 75% eveniment 100/100."},
-    {id:9, gain:"Standard: rezultat bun 90/100. Alternativ: 10% bun 100/100, 90% bun 0/100.",
-          loss:"Standard: rezultat rău 10/100. Alternativ: 10% rău 0/100, 90% rău 100/100."},
-    {id:10,gain:"Standard: îmbunătățire 55/100. Nou: 35% îmbunătățire 100/100, 65% îmbunătățire 0/100.",
-          loss:"Standard: fără îmbunătățire 45/100. Nou: 35% fără îmbunătățire 0/100, 65% fără îmbunătățire 100/100."}
-  ];
-  const trials = jsPsych.randomization.shuffle(scenarios);
-
-  // 4) util: digit strings
-  function digits(n){
-    const arr = [];
-    for(let i=0;i<n;i++){
-      arr.push(String(jsPsych.randomization.sampleWithoutReplacement([0,1,2,3,4,5,6,7,8,9], 1)[0]));
-    }
-    return arr.join(" ");
+/** =========================
+ *  0) INIT + CSV EXPORT
+ *  ========================= */
+const jsPsych = initJsPsych({
+  on_finish: () => {
+    // export CSV automat
+    const pid = jsPsych.data.get().select('participant_id').values[0] || 'NOID';
+    jsPsych.data.get().localSave('csv', `data_${pid}.csv`);
+    // afișare rapidă (opțional)
+    jsPsych.data.displayData();
   }
+});
 
-  // 5) timeline
-  const timeline = [];
+/** =========================
+ *  1) CONDIȚII 2×2 (between)
+ *  ========================= */
+const framing = jsPsych.randomization.sampleWithoutReplacement(['gain','loss'], 1)[0];
+const load = jsPsych.randomization.sampleWithoutReplacement(['low','high'], 1)[0];
 
-  // ID
-  timeline.push({
-    type: jsPsychSurveyText,
-    questions: [{prompt:"ID participant (ex. S01):", required:true, name:"pid"}],
-    button_label: "Continuă",
-    on_finish: (data) => {
-      const resp = JSON.parse(data.responses);
-      jsPsych.data.addProperties({ participant_id: (resp.pid || "SXX").trim() });
-    }
-  });
+// device info (util pentru raport)
+const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  // Instrucțiuni
+jsPsych.data.addProperties({
+  framing_condition: framing,
+  load_condition: load,
+  device_mobile: isMobile ? 1 : 0
+});
+
+/** =========================
+ *  2) SCENARII (10) – medical risk choice framing
+ *  (echivalente probabilistic; formulare gain/loss)
+ *  ========================= */
+const scenarios = [
+  {sid: 1, domain: "oncologie",
+   gain: "Tratamentul standard va salva 70 din 100 pacienți. Tratamentul experimental are 40% șanse să salveze toți cei 100 și 60% șanse să nu salveze pe nimeni.",
+   loss: "Tratamentul standard va duce la decesul a 30 din 100 pacienți. Tratamentul experimental are 40% șanse ca nimeni să nu moară și 60% șanse ca toți cei 100 să moară."},
+
+  {sid: 2, domain: "chirurgie",
+   gain: "Opțiunea A asigură recuperare completă pentru 80 din 100 pacienți. Opțiunea B are 30% șanse de recuperare pentru toți cei 100 și 70% șanse de recuperare pentru niciunul.",
+   loss: "Opțiunea A implică lipsa recuperării pentru 20 din 100 pacienți. Opțiunea B are 30% șanse ca nimeni să nu rămână fără recuperare și 70% șanse ca toți cei 100 să rămână fără recuperare."},
+
+  {sid: 3, domain: "tratament experimental",
+   gain: "Tratamentul standard îmbunătățește starea pentru 65 din 100 pacienți. Alternativa are 25% șanse să îmbunătățească starea pentru toți cei 100 și 75% șanse să nu îmbunătățească pentru nimeni.",
+   loss: "Tratamentul standard nu îmbunătățește starea pentru 35 din 100 pacienți. Alternativa are 25% șanse ca nimeni să nu rămână fără îmbunătățire și 75% șanse ca toți cei 100 să rămână fără îmbunătățire."},
+
+  {sid: 4, domain: "cardiologie",
+   gain: "Tratamentul standard previne complicații la 75 din 100 pacienți. Alternativa are 35% șanse să prevină complicații la toți cei 100 și 65% șanse să nu prevină la nimeni.",
+   loss: "Tratamentul standard duce la complicații la 25 din 100 pacienți. Alternativa are 35% șanse ca nimeni să nu aibă complicații și 65% șanse ca toți cei 100 să aibă complicații."},
+
+  {sid: 5, domain: "neurologie",
+   gain: "Opțiunea sigură menține funcționarea pentru 70 din 100 pacienți. Opțiunea riscantă are 20% șanse să mențină funcționarea pentru toți cei 100 și 80% șanse să nu mențină pentru nimeni.",
+   loss: "Opțiunea sigură implică pierderea funcționării la 30 din 100 pacienți. Opțiunea riscantă are 20% șanse ca nimeni să nu piardă funcționarea și 80% șanse ca toți cei 100 să piardă funcționarea."},
+
+  {sid: 6, domain: "infecțioase",
+   gain: "Tratamentul standard vindecă 60 din 100 pacienți. Alternativa are 30% șanse să vindece toți cei 100 și 70% șanse să nu vindece pe nimeni.",
+   loss: "Tratamentul standard nu vindecă 40 din 100 pacienți. Alternativa are 30% șanse ca nimeni să nu rămână nevindecat și 70% șanse ca toți cei 100 să rămână nevindecați."},
+
+  {sid: 7, domain: "urgențe",
+   gain: "Opțiunea A stabilizează 85 din 100 pacienți. Opțiunea B are 15% șanse să stabilizeze toți cei 100 și 85% șanse să nu stabilizeze pe nimeni.",
+   loss: "Opțiunea A nu stabilizează 15 din 100 pacienți. Opțiunea B are 15% șanse ca nimeni să nu rămână nestabilizat și 85% șanse ca toți cei 100 să rămână nestabilizați."},
+
+  {sid: 8, domain: "pediatrie",
+   gain: "Tratamentul standard are rezultat bun pentru 70 din 100. Alternativa are 25% șanse de rezultat bun pentru 100 din 100 și 75% șanse de rezultat bun pentru 0 din 100.",
+   loss: "Tratamentul standard are rezultat nefavorabil pentru 30 din 100. Alternativa are 25% șanse de rezultat nefavorabil pentru 0 din 100 și 75% șanse de rezultat nefavorabil pentru 100 din 100."},
+
+  {sid: 9, domain: "anestezie",
+   gain: "Opțiunea sigură are rezultat bun pentru 90 din 100 pacienți. Opțiunea riscantă are 10% șanse de rezultat bun pentru toți cei 100 și 90% șanse de rezultat bun pentru niciunul.",
+   loss: "Opțiunea sigură are rezultat nefavorabil pentru 10 din 100 pacienți. Opțiunea riscantă are 10% șanse ca nimeni să nu aibă rezultat nefavorabil și 90% șanse ca toți cei 100 să aibă rezultat nefavorabil."},
+
+  {sid: 10, domain: "psihiatrie (efecte adverse)",
+   gain: "Tratamentul standard reduce simptomele la 55 din 100 pacienți. Alternativa are 35% șanse să reducă simptomele la toți cei 100 și 65% șanse să nu reducă la nimeni.",
+   loss: "Tratamentul standard nu reduce simptomele la 45 din 100 pacienți. Alternativa are 35% șanse ca nimeni să nu rămână fără reducere și 65% șanse ca toți cei 100 să rămână fără reducere."}
+];
+
+const trials = jsPsych.randomization.shuffle(scenarios);
+
+/** =========================
+ *  3) UTIL: generare șir cifre (load)
+ *  ========================= */
+function generateDigits(n) {
+  const pool = [0,1,2,3,4,5,6,7,8,9];
+  let out = [];
+  for (let i=0; i<n; i++){
+    out.push(String(jsPsych.randomization.sampleWithoutReplacement(pool,1)[0]));
+  }
+  return out.join(" ");
+}
+
+function normDigits(x){
+  return (x || "").replace(/\s+/g,' ').trim();
+}
+
+/** =========================
+ *  4) TIMELINE (complet)
+ *  ========================= */
+let timeline = [];
+
+/* ID participant */
+timeline.push({
+  type: jsPsychSurveyText,
+  questions: [
+    {prompt: "ID participant (ex: S01). IMPORTANT: folosește același format pentru toți.", required: true, name: "pid"}
+  ],
+  button_label: "Continuă",
+  on_finish: (data) => {
+    const resp = JSON.parse(data.responses);
+    jsPsych.data.addProperties({ participant_id: (resp.pid || "SXX").trim() });
+  }
+});
+
+/* Notă dispozitiv (nu blochează; doar avertizează pentru RT) */
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="btnwide">
+      <h3>Instrucțiuni</h3>
+      <p>Vei parcurge <b>10 runde</b>. În fiecare rundă:</p>
+      <ol>
+        <li>Memorezi un șir de cifre</li>
+        <li>Citești un scenariu medical</li>
+        <li>Alegi <b>opțiune sigură</b> vs <b>opțiune riscantă</b></li>
+        <li>Evaluezi <b>responsabilitatea morală</b> pentru decizia ta</li>
+        <li>Scrii șirul de cifre memorat</li>
+      </ol>
+      <p class="note">Condiția ta este setată automat (framing & load). Răspunde cât mai natural.</p>
+      ${isMobile ? `<p class="warn"><b>Notă:</b> ești pe mobil. Experimentul merge, dar timpii de reacție pot fi mai variabili decât pe laptop/PC.</p>` : ``}
+    </div>
+  `,
+  choices: ["Începem"]
+});
+
+/* Trial loop: 10 scenarii */
+trials.forEach(sc => {
+  const digitsN = (load === 'low') ? 2 : 7;
+  const digitsTarget = generateDigits(digitsN);
+
+  // (A) LOAD display
   timeline.push({
     type: jsPsychHtmlButtonResponse,
     stimulus: `
-      <p><strong>Pilot – decizii medicale</strong></p>
-      <p>Vei memora cifre, vei citi scenarii și vei alege între opțiune sigură și riscantă.</p>
-      <p>După fiecare decizie: evaluezi responsabilitatea morală și scrii cifrele memorate.</p>
-      <p><em>Condiția ta:</em> framing=${framing}, load=${load}</p>
+      <div class="btnwide">
+        <p class="big">Memorează șirul:</p>
+        <p class="digits"><b>${digitsTarget}</b></p>
+        <p class="note">Apasă „Continuă” când ești gata.</p>
+      </div>
     `,
-    choices: ["Începe"]
+    choices: ["Continuă"],
+    data: { task: "load", scenario_id: sc.sid, domain: sc.domain, digits_target: digitsTarget, digits_n: digitsN }
   });
 
-  // 10 scenarii
-  trials.forEach((sc) => {
-    const n = (load === "low") ? 2 : 7;
-    const target = digits(n);
-
-    // LOAD
-    timeline.push({
-      type: jsPsychHtmlButtonResponse,
-      stimulus: `<p>Memorează șirul:</p><p style="font-size:28px"><strong>${target}</strong></p>`,
-      choices: ["Continuă"],
-      data: {task:"load", scenario_id: sc.id, digits_target: target}
-    });
-
-    // DECIZIE (RT automat)
-    timeline.push({
-      type: jsPsychHtmlButtonResponse,
-      stimulus: `<p>${framing === "gain" ? sc.gain : sc.loss}</p><p><strong>Ce alegi?</strong></p>`,
-      choices: ["Opțiune sigură", "Opțiune riscantă"],
-      data: {task:"decision", scenario_id: sc.id}
-    });
-
-    // RESPONSABILITATE
-    timeline.push({
-      type: jsPsychSurveyLikert,
-      preamble: "<p>Referitor la decizia ta:</p>",
-      questions: [{
-        prompt: "Cât de responsabil moral te simți pentru decizia pe care ai luat-o?",
-        labels: ["1-deloc","2","3","4","5","6","7-foarte mult"],
-        required: true
-      }],
-      data: {task:"responsibility", scenario_id: sc.id}
-    });
-
-    // RECALL
-    timeline.push({
-      type: jsPsychSurveyText,
-      questions: [{prompt:"Scrie șirul de cifre memorat:", required:true, name:"recall"}],
-      button_label: "Continuă",
-      data: {task:"recall", scenario_id: sc.id}
-    });
-  });
-
-  // Debrief
+  // (B) DECISION (RT measured automatically)
   timeline.push({
     type: jsPsychHtmlButtonResponse,
-    stimulus: "<p>Mulțumim! Scenariile au fost ipotetice.</p>",
-    choices: ["Finalizează"]
+    stimulus: `
+      <div class="btnwide">
+        <p><b>Scenariu (${sc.domain})</b></p>
+        <p>${framing === 'gain' ? sc.gain : sc.loss}</p>
+        <p class="big"><b>Ce alegi?</b></p>
+      </div>
+    `,
+    choices: ["Opțiune sigură", "Opțiune riscantă"],
+    data: { task: "decision", scenario_id: sc.sid, domain: sc.domain },
+    on_finish: (data) => {
+      data.choice_safe_risky = (data.response === 0) ? "safe" : "risky";
+      // RT este deja în data.rt
+    }
   });
 
-  jsPsych.run(timeline);
+  // (C) RESPONSIBILITY (dependent measure)
+  timeline.push({
+    type: jsPsychSurveyLikert,
+    preamble: `<p>Referitor la <b>decizia ta</b> din scenariul anterior:</p>`,
+    questions: [{
+      prompt: "Cât de responsabil moral te simți pentru consecințele deciziei tale?",
+      labels: ["1 deloc", "2", "3", "4", "5", "6", "7 foarte mult"],
+      required: true
+    }],
+    data: { task: "responsibility", scenario_id: sc.sid, domain: sc.domain }
+  });
+
+  // (D) RECALL digits (manipulation check)
+  timeline.push({
+    type: jsPsychSurveyText,
+    questions: [{
+      prompt: "Scrie șirul de cifre memorat (exact cum îl ții minte):",
+      required: true,
+      name: "recall"
+    }],
+    button_label: "Continuă",
+    data: { task: "recall", scenario_id: sc.sid, domain: sc.domain, digits_target: digitsTarget, digits_n: digitsN },
+    on_finish: (data) => {
+      const resp = JSON.parse(data.responses);
+      const typed = normDigits(resp.recall);
+      const target = normDigits(data.digits_target);
+      data.digits_typed = typed;
+      data.recall_correct = (typed === target) ? 1 : 0;
+    }
+  });
+});
+
+/* Debrief */
+timeline.push({
+  type: jsPsychHtmlButtonResponse,
+  stimulus: `
+    <div class="btnwide">
+      <h3>Debriefing</h3>
+      <p>Scenariile au fost ipotetice. Studiul investighează cum formularea informației (câștig/pierdere) și încărcarea cognitivă influențează deciziile și responsabilitatea morală percepută.</p>
+      <p><b>Mulțumim!</b> Apasă „Finalizează” pentru a descărca automat fișierul CSV.</p>
+    </div>
+  `,
+  choices: ["Finalizează"]
+});
+
+/* Run */
+jsPsych.run(timeline);
 </script>
 </html>
