@@ -34,32 +34,29 @@
    0) UTILITARE
 ========================================================= */
 
-// detect mobil (nu e perfect, dar ok pentru log)
 function isMobile() {
   return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 }
 
-// random int
-function randInt(min, max) { // inclusive
+function randInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// generează șir cifre (fără 0 la început ca să fie mai ușor de introdus)
 function genDigits(n) {
   let s = "";
   for (let i = 0; i < n; i++) s += String(randInt(1, 9));
   return s;
 }
 
-// normalizează cifre introduse (scoate spații)
 function normDigits(x) {
   return String(x || "").replace(/\s+/g, "");
 }
 
-// helper: escape HTML (pentru numere/texte)
-function esc(s){ return String(s).replace(/[&<>"']/g, m => ({
-  "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
-}[m])); }
+function esc(s){
+  return String(s).replace(/[&<>"']/g, m => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+  }[m]));
+}
 
 /* =========================================================
    1) INIT jsPsych (salvare CSV la final)
@@ -116,6 +113,7 @@ timeline.push({
   button_label: "Continuă",
   on_finish: function(data){
     let pid = "INVALID";
+
     if (data.response && typeof data.response === "object" && data.response.pid) {
       pid = String(data.response.pid).trim();
     }
@@ -142,8 +140,6 @@ timeline.push({
 
 /* =========================================================
    4) RANDOMIZARE BETWEEN-SUBJECTS 2×2
-      framing: gain vs loss
-      load: low vs high
 ========================================================= */
 
 const framing_condition = jsPsych.randomization.sampleWithoutReplacement(["gain", "loss"], 1)[0];
@@ -165,15 +161,18 @@ timeline.push({
       <h3>Instrucțiuni</h3>
       <p class="small">
         Vei parcurge <b>10 scenarii medicale</b> și vei alege între o opțiune <b>sigură</b> și una <b>riscantă</b>.
+        După fiecare scenariu vei răspunde la o întrebare despre <b>responsabilitatea morală</b>.
         În unele momente ți se va cere să <b>memorezi un șir de cifre</b> și să îl reintroduci ulterior.
       </p>
       <p class="small">
         Răspunde cât mai <b>spontan</b>. Nu există răspunsuri corecte/greșite la decizie.
       </p>
+
+      <!-- Pentru colectare mare: poți lăsa ascunsă această informație.
+           Dacă vrei s-o scoți complet, șterge blocul de mai jos. -->
       <p class="small muted">
-        Condiții: <span class="pill">framing = ${esc(framing_condition)}</span>
+        (Etichete interne) <span class="pill">framing = ${esc(framing_condition)}</span>
         <span class="pill">load = ${esc(load_condition)}</span>
-        <br>(Aceste etichete nu vor fi arătate participanților reali; le poți scoate înainte de colectarea mare.)
       </p>
     </div>
   `,
@@ -181,12 +180,7 @@ timeline.push({
 });
 
 /* =========================================================
-   6) BANCA DE 10 SCENARII (aceeași structură numerică)
-      Fiecare scenariu are:
-      - context
-      - N persoane afectate (ex 100)
-      - Program sigur: salvați X / mor Y
-      - Program riscant: p% salvați toți / p% salvați 0
+   6) BANCA DE 10 SCENARII
 ========================================================= */
 
 const scenarios = [
@@ -195,17 +189,16 @@ const scenarios = [
   { id: 3,  title: "Terapie intensivă", context: "În ATI, trebuie ales un protocol de intervenție pentru pacienți cu complicații severe." },
   { id: 4,  title: "Antibiotic rezistent", context: "Există o infecție rezistentă la tratament și se decide între schema standard și una experimentală." },
   { id: 5,  title: "Transplant", context: "Se evaluează o opțiune de intervenție pentru pacienți aflați pe lista de transplant." },
-  { id: 6,  title: "Vaccinare preventivă", context: "Se decide un program de intervenție preventivă pentru o populație expusă riscului." },
+  { id: 6,  title: "Intervenție preventivă", context: "Se decide un program de intervenție preventivă pentru o populație expusă riscului." },
   { id: 7,  title: "Tratament pediatric", context: "Se alege între două opțiuni terapeutice pentru un grup de copii cu o boală rară." },
   { id: 8,  title: "Neurologie", context: "Se decide între o intervenție standard și una cu risc înalt pentru un grup de pacienți neurologici." },
   { id: 9,  title: "Epidemie locală", context: "Într-o comunitate apare o epidemie; se alege o strategie de intervenție." },
-  { id: 10, title: "Terapie psihiatrică cu efecte adverse", context: "Se decide între un tratament conservator și unul cu potențial mare, dar și efecte adverse." }
+  { id: 10, title: "Psihiatrie (efecte adverse)", context: "Se decide între un tratament conservator și unul cu potențial mare, dar și efecte adverse." }
 ];
 
-// Parametri standard (poți schimba dacă vrei mai multă varietate)
 const N_total = 100;
-const safe_saved = 30;     // sigur: salvezi 30 / pierzi 70
-const risky_prob = 0.30;   // riscant: 30% salvezi 100 / 70% salvezi 0
+const safe_saved = 30;
+const risky_prob = 0.30;
 
 function stimulusForScenario(sc, framing) {
   const p = Math.round(risky_prob * 100);
@@ -222,8 +215,8 @@ function stimulusForScenario(sc, framing) {
         <p class="muted small mt">Alege opțiunea pe care o consideri mai potrivită.</p>
       </div>
     `;
-  } else { // loss
-    const safe_die = N_total - safe_saved; // 70
+  } else {
+    const safe_die = N_total - safe_saved;
     return `
       <div class="wrap scenario">
         <div class="pill mb">${esc(sc.title)}</div>
@@ -238,36 +231,24 @@ function stimulusForScenario(sc, framing) {
 }
 
 /* =========================================================
-   7) CONSTRUIRE TRIALURI (LOAD + DECIZIE + RESPONSABILITATE + RECALL)
-      - load_condition determină digits_n
-      - 10 scenarii în ordine random per participant
+   7) CONSTRUIRE TRIALURI (10 scenarii random)
 ========================================================= */
 
 const digits_n = (load_condition === "high") ? 7 : 2;
-
-// randomizează ordinea scenariilor
 const scenario_order = jsPsych.randomization.shuffle(scenarios.slice());
 
-scenario_order.forEach((sc, idx) => {
+scenario_order.forEach((sc) => {
 
-  // 7.1) Prezentare cifre (memorare)
+  // 7.1) Prezentare cifre (memorare) — generăm o singură dată
   timeline.push({
     type: jsPsychHtmlKeyboardResponse,
-    stimulus: `
-      <div class="wrap center">
-        <p class="small muted">Memorează cifrele (le vei introduce după decizie)</p>
-        <h2 style="letter-spacing:2px;">${genDigits(digits_n).split("").join(" ")}</h2>
-        <p class="small muted">Se va continua automat...</p>
-      </div>
-    `,
     choices: "NO_KEYS",
     trial_duration: 2000,
     on_start: function(trial){
-      // generează și „închide” șirul în trial, ca să-l avem la recall
       const target = genDigits(digits_n);
       trial.stimulus = `
         <div class="wrap center">
-          <p class="small muted">Memorează cifrele (le vei introduce după decizie)</p>
+          <p class="small muted">Memorează cifrele (le vei introduce după ce iei decizia)</p>
           <h2 style="letter-spacing:2px;">${target.split("").join(" ")}</h2>
           <p class="small muted">Se va continua automat...</p>
         </div>
@@ -275,6 +256,7 @@ scenario_order.forEach((sc, idx) => {
       trial.data = {
         task: "digits_present",
         scenario_id: sc.id,
+        scenario_title: sc.title,
         domain: "medical",
         digits_n: digits_n,
         digits_target: target
@@ -282,7 +264,7 @@ scenario_order.forEach((sc, idx) => {
     }
   });
 
-  // 7.2) Decizia (RT se salvează automat în data.rt)
+  // 7.2) Decizia (RT automat)
   timeline.push({
     type: jsPsychHtmlButtonResponse,
     stimulus: stimulusForScenario(sc, framing_condition),
@@ -290,17 +272,17 @@ scenario_order.forEach((sc, idx) => {
     data: {
       task: "decision",
       scenario_id: sc.id,
+      scenario_title: sc.title,
       domain: "medical"
     },
     on_finish: function(data){
-      data.choice_safe_risky = (data.response === 1) ? 1 : 0;
-      // păstrăm framing/load pe rând, deși există și în properties
+      data.choice_safe_risky = (data.response === 1) ? 1 : 0; // 1=riscant, 0=sigur
       data.framing_condition = framing_condition;
       data.load_condition = load_condition;
     }
   });
 
-  // 7.3) Responsabilitate morală (1 item; poți face 3 itemi dacă vrei)
+  // 7.3) Responsabilitate morală — FIX (fără NA, fără crash)
   timeline.push({
     type: jsPsychSurveyLikert,
     questions: [{
@@ -311,17 +293,19 @@ scenario_order.forEach((sc, idx) => {
     data: {
       task: "responsibility_rating",
       scenario_id: sc.id,
+      scenario_title: sc.title,
       domain: "medical"
     },
     on_finish: function(data){
-      // extragem numeric robust (primul număr găsit)
-      // jsPsych survey-likert pune adesea răspunsul ca obiect: {Q0: n}
-      let val = NA;
+      // response tipic: {Q0: 0..6}
+      let val = null;
       if (data.response && typeof data.response === "object") {
-        const firstKey = Object.keys(data.response)[0];
-        val = data.response[firstKey];
+        const keys = Object.keys(data.response);
+        if (keys.length > 0) val = data.response[keys[0]];
       }
-      data.responsibility = Number(val);
+      // convertim index 0..6 -> scala 1..7
+      data.responsibility = (val === null || val === undefined) ? null : (Number(val) + 1);
+
       data.framing_condition = framing_condition;
       data.load_condition = load_condition;
     }
@@ -331,7 +315,7 @@ scenario_order.forEach((sc, idx) => {
   timeline.push({
     type: jsPsychSurveyText,
     questions: [{
-      prompt: "Introdu cifrele memorate (fără alte caractere):",
+      prompt: "Introdu cifrele memorate (doar cifre, poți pune și spații):",
       name: "recall",
       required: true
     }],
@@ -339,11 +323,15 @@ scenario_order.forEach((sc, idx) => {
     data: {
       task: "digits_recall",
       scenario_id: sc.id,
+      scenario_title: sc.title,
       domain: "medical"
     },
     on_start: function(trial){
-      // găsim digits_target din ultimul trial „digits_present”
-      const lastDigits = jsPsych.data.get().filter({task:"digits_present", scenario_id: sc.id}).last(1).values()[0];
+      // luăm digits_target din ultimul digits_present
+      const lastDigits = jsPsych.data.get()
+        .filter({task:"digits_present", scenario_id: sc.id})
+        .last(1).values()[0];
+
       trial.data.digits_target = lastDigits?.digits_target || "";
       trial.data.digits_n = digits_n;
     },
@@ -352,11 +340,13 @@ scenario_order.forEach((sc, idx) => {
       if (data.response && typeof data.response === "object" && data.response.recall != null) {
         typedRaw = String(data.response.recall);
       }
+
       const typed = normDigits(typedRaw);
       const target = normDigits(data.digits_target);
 
       data.digits_typed = typed;
       data.recall_correct = (typed === target) ? 1 : 0;
+
       data.framing_condition = framing_condition;
       data.load_condition = load_condition;
     }
