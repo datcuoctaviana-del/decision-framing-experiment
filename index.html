@@ -134,10 +134,26 @@ timeline.push({
     {prompt: "ID participant (ex: S01). IMPORTANT: folosește același format pentru toți.", required: true, name: "pid"}
   ],
   button_label: "Continuă",
-  on_finish: (data) => {
-    const resp = JSON.parse(data.responses);
-    jsPsych.data.addProperties({ participant_id: (resp.pid || "SXX").trim() });
+ on_finish: (data) => {
+  let pid = "SXX";
+
+  // caz standard jsPsych 7: data.response este obiect
+  if (data.response && typeof data.response === "object" && data.response.pid) {
+    pid = String(data.response.pid).trim();
   }
+
+  // fallback: data.responses este string JSON
+  if (pid === "SXX" && typeof data.responses === "string") {
+    try {
+      const parsed = JSON.parse(data.responses);
+      if (parsed.pid) pid = String(parsed.pid).trim();
+    } catch (e) {
+      // ignorăm dacă nu e JSON valid
+    }
+  }
+
+  jsPsych.data.addProperties({ participant_id: pid });
+}
 });
 
 /* Notă dispozitiv (nu blochează; doar avertizează pentru RT) */
