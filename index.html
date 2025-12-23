@@ -140,21 +140,37 @@ timeline.push({
   button_label: "Continuă",
   on_finish: function(data){
 
-    // extrage ID-ul introdus
-    const responses = JSON.parse(data.responses);
-    const pid = responses.pid.trim();
+   on_finish: function(data){
+  let pid = "SXX";
 
-    // salvează ID-ul global
-    jsPsych.data.addProperties({
-      participant_id: pid
-    });
+  // 1) format modern: data.response e obiect
+  if (data.response && typeof data.response === "object" && data.response.pid) {
+    pid = String(data.response.pid).trim();
+  }
 
-    // validare format ID
-    const valid = /^ST(10|[1-9])_\d{2}$/.test(pid);
+  // 2) fallback: data.responses e string JSON (dacă există)
+  if (pid === "SXX" && typeof data.responses === "string") {
+    try {
+      const parsed = JSON.parse(data.responses);
+      if (parsed.pid) pid = String(parsed.pid).trim();
+    } catch (e) {}
+  }
 
-    if(!valid){
-      alert("ID invalid. Folosește formatul STx_yy (ex: ST3_07). Reîncarcă pagina și introdu din nou.");
-    }
+  // salvează ID-ul global
+  jsPsych.data.addProperties({ participant_id: pid });
+
+  // validare: ST1_01 ... ST10_99
+  const valid = /^ST(10|[1-9])_\d{2}$/.test(pid);
+
+  // dacă ID-ul e greșit, oprește experimentul cu mesaj clar
+  if(!valid){
+    jsPsych.endExperiment(
+      `<p><b>ID invalid.</b></p>
+       <p>Te rugăm să reîncarci pagina și să introduci ID în formatul <b>STx_yy</b> (ex: <b>ST3_07</b>).</p>`
+    );
+  }
+}
+
   }
 });
 
