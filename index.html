@@ -131,30 +131,33 @@ let timeline = [];
 timeline.push({
   type: jsPsychSurveyText,
   questions: [
-    {prompt: "ID participant (ex: S01). IMPORTANT: folosește același format pentru toți.", required: true, name: "pid"}
+    {
+      prompt: "ID participant (format: ST1_01, ST2_05 etc.). Te rugăm să respecți formatul.",
+      required: true,
+      name: "pid"
+    }
   ],
   button_label: "Continuă",
- on_finish: (data) => {
-  let pid = "SXX";
+  on_finish: function(data){
 
-  // caz standard jsPsych 7: data.response este obiect
-  if (data.response && typeof data.response === "object" && data.response.pid) {
-    pid = String(data.response.pid).trim();
-  }
+    // extrage ID-ul introdus
+    const responses = JSON.parse(data.responses);
+    const pid = responses.pid.trim();
 
-  // fallback: data.responses este string JSON
-  if (pid === "SXX" && typeof data.responses === "string") {
-    try {
-      const parsed = JSON.parse(data.responses);
-      if (parsed.pid) pid = String(parsed.pid).trim();
-    } catch (e) {
-      // ignorăm dacă nu e JSON valid
+    // salvează ID-ul global
+    jsPsych.data.addProperties({
+      participant_id: pid
+    });
+
+    // validare format ID
+    const valid = /^ST(10|[1-9])_\d{2}$/.test(pid);
+
+    if(!valid){
+      alert("ID invalid. Folosește formatul STx_yy (ex: ST3_07). Reîncarcă pagina și introdu din nou.");
     }
   }
-
-  jsPsych.data.addProperties({ participant_id: pid });
-}
 });
+
 
 /* Notă dispozitiv (nu blochează; doar avertizează pentru RT) */
 timeline.push({
