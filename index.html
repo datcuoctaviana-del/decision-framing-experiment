@@ -236,13 +236,30 @@ trials.forEach(sc => {
     }],
     button_label: "Continuă",
     data: { task: "recall", scenario_id: sc.sid, domain: sc.domain, digits_target: digitsTarget, digits_n: digitsN },
-    on_finish: (data) => {
-      const resp = JSON.parse(data.responses);
-      const typed = normDigits(resp.recall);
-      const target = normDigits(data.digits_target);
-      data.digits_typed = typed;
-      data.recall_correct = (typed === target) ? 1 : 0;
+   on_finish: (data) => {
+  let typedRaw = "";
+
+  // caz standard jsPsych 7: data.response este obiect
+  if (data.response && typeof data.response === "object" && data.response.recall != null) {
+    typedRaw = String(data.response.recall);
+  }
+
+  // fallback: data.responses este string JSON
+  if (!typedRaw && typeof data.responses === "string") {
+    try {
+      const parsed = JSON.parse(data.responses);
+      if (parsed.recall != null) typedRaw = String(parsed.recall);
+    } catch (e) {
+      // ignorăm dacă nu e JSON valid
     }
+  }
+
+  const typed = normDigits(typedRaw);
+  const target = normDigits(data.digits_target);
+
+  data.digits_typed = typed;
+  data.recall_correct = (typed === target) ? 1 : 0;
+}
   });
 });
 
