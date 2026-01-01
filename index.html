@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Decizii medicale – Framing × Load</title>
+  <title>Decizii medicale – A/B (Framing × Load)</title>
 
   <!-- jsPsych LOCAL -->
   <script src="jspsych/jspsych.js"></script>
@@ -17,12 +17,14 @@
 
   <style>
     body { background:#fff; }
-    .wrap { max-width: 900px; margin: 0 auto; }
+    .wrap { max-width: 920px; margin: 0 auto; }
     .center { text-align:center; }
     .small { font-size:0.95rem; color:#444; }
     .muted { color:#666; }
     .pill { display:inline-block; padding:4px 10px; border:1px solid #ddd; border-radius:999px; margin-right:6px; }
-    .scenario { line-height:1.45; }
+    .scenario { line-height:1.5; }
+    .hpad { padding: 10px 0; }
+    h3,h4 { margin: 0.4rem 0; }
   </style>
 </head>
 <body></body>
@@ -45,6 +47,14 @@ function genDigits(n){
 function normDigits(x){
   return String(x||"").replace(/\s+/g,"");
 }
+function shuffleArray(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
 
 /* ===========================
    INIT jsPsych
@@ -60,10 +70,13 @@ const jsPsych = initJsPsych({
 const timeline = [];
 
 /* ===========================
-   CONDIȚII DIN URL
+   CONDIȚII DIN URL (4 LINKURI)
+   ?form=1 high risk + high load
+   ?form=2 high risk + low  load
+   ?form=3 low  risk + high load
+   ?form=4 low  risk + low  load
 =========================== */
 const form = getUrlParam("form");
-
 const map = {
   "1": { risk:"high", load:"high" },
   "2": { risk:"high", load:"low"  },
@@ -74,7 +87,12 @@ const map = {
 if(!map[form]){
   timeline.push({
     type: jsPsychHtmlButtonResponse,
-    stimulus: "<p>Link invalid. Folosește linkul primit de la recruiter.</p>",
+    stimulus: `
+      <div class="wrap">
+        <h3>Link invalid</h3>
+        <p class="small">Te rugăm să folosești linkul primit de la recruiter (cu <code>?form=1</code>, <code>?form=2</code>, <code>?form=3</code> sau <code>?form=4</code>).</p>
+      </div>
+    `,
     choices:["Închide"]
   });
   jsPsych.run(timeline);
@@ -83,10 +101,12 @@ if(!map[form]){
 
 const risk_level = map[form].risk;
 const load_condition = map[form].load;
+
+// framing random între participanți (gain/loss)
 const framing_condition = jsPsych.randomization.sampleWithoutReplacement(["gain","loss"],1)[0];
 
 jsPsych.data.addProperties({
-  form_id:Number(form),
+  form_id: Number(form),
   risk_level,
   load_condition,
   framing_condition
@@ -100,8 +120,11 @@ timeline.push({
   stimulus: `
     <div class="wrap">
       <h3>Consimțământ informat</h3>
-      <p class="small">Participi la un studiu de psihologie cognitivă despre decizii medicale ipotetice.</p>
-      <p class="small muted">Durata: ~10–12 minute. Participarea este voluntară.</p>
+      <p class="small">
+        Participi la un studiu despre cum iau oamenii decizii când primesc informații medicale.
+        Vei citi situații ipotetice și vei alege între două variante (A și B).
+      </p>
+      <p class="small muted">Durata: ~10–12 minute. Participarea este voluntară. Poți opri oricând.</p>
     </div>
   `,
   choices:["Sunt de acord"]
@@ -117,10 +140,15 @@ timeline.push({
     name:"pid",
     required:true
   }],
+  button_label: "Continuă",
   on_finish:function(data){
-    const pid = data.response.pid.trim();
-    if(!/^ST\d+_\d{2}$/.test(pid)){
-      jsPsych.endExperiment("ID invalid. Reîncarcă pagina.");
+    const pid = (data.response?.pid || "").trim();
+    if(!/^ST(10|[1-9])_\d{2}$/.test(pid)){
+      jsPsych.endExperiment(`
+        <div class="wrap">
+          <p><b>ID invalid.</b> Reîncarcă pagina și introdu un ID de forma <b>ST4_07</b>.</p>
+        </div>
+      `);
       return;
     }
     jsPsych.data.addProperties({ participant_id: pid });
@@ -134,142 +162,275 @@ timeline.push({
   type: jsPsychHtmlButtonResponse,
   stimulus: `
     <div class="wrap">
-      <p class="small">Vei parcurge 10 scenarii medicale.</p>
+      <h3>Instrucțiuni</h3>
+      <p class="small">
+        Vei parcurge <b>10 situații</b>. Pentru fiecare:
+        <br>1) Ții minte un șir de cifre (scurt)
+        <br>2) Alegi între <b>Opțiunea A</b> și <b>Opțiunea B</b>
+        <br>3) Spui cât de responsabil(ă) moral te simți pentru alegere
+        <br>4) Reintroduci cifrele
+      </p>
       <p class="small muted">
+        Condiții (setate de link):
         <span class="pill">risc=${risk_level}</span>
         <span class="pill">load=${load_condition}</span>
         <span class="pill">framing=${framing_condition}</span>
       </p>
+      <p class="small muted">Apasă „Începe”.</p>
     </div>
   `,
   choices:["Începe"]
 });
 
 /* ===========================
-   SCENARII
+   SCENARII (10) cu variație de probabilități (anti-învățare)
 =========================== */
 const N = 100;
+
 const scenarios = [
-  {id:1, title:"Oncologie", ctx:"Tratament pentru cancer agresiv",
+  {id:1,  title:"Oncologie", ctx:"E vorba de un tratament pentru un cancer agresiv.",
    low:{safe:70,p:0.80}, high:{safe:35,p:0.45}},
-  {id:2, title:"Chirurgie cardiacă", ctx:"Procedură standard vs inovatoare",
+  {id:2,  title:"Chirurgie cardiacă", ctx:"E o procedură la inimă, cu două abordări posibile.",
    low:{safe:60,p:0.70}, high:{safe:30,p:0.40}},
-  {id:3, title:"ATI", ctx:"Protocol pentru pacienți critici",
+  {id:3,  title:"Terapie intensivă", ctx:"Pacienții sunt în stare gravă, iar echipa decide protocolul.",
    low:{safe:55,p:0.65}, high:{safe:25,p:0.30}},
-  {id:4, title:"Infecție rezistentă", ctx:"Tratament antibiotic",
+  {id:4,  title:"Infecție rezistentă", ctx:"Infecție greu de tratat; avem o variantă standard și una nouă.",
    low:{safe:50,p:0.60}, high:{safe:20,p:0.25}},
-  {id:5, title:"Transplant", ctx:"Decizie pre-transplant",
+  {id:5,  title:"Transplant", ctx:"Decizie legată de un tratament înainte de transplant.",
    low:{safe:45,p:0.55}, high:{safe:22,p:0.28}},
-  {id:6, title:"Prevenție", ctx:"Intervenție preventivă",
+  {id:6,  title:"Prevenție", ctx:"Program de prevenție pentru persoane cu risc crescut.",
    low:{safe:65,p:0.75}, high:{safe:28,p:0.35}},
-  {id:7, title:"Pediatrie", ctx:"Boală rară la copii",
+  {id:7,  title:"Pediatrie", ctx:"Situație la copii, boală rară, două opțiuni de tratament.",
    low:{safe:62,p:0.72}, high:{safe:26,p:0.32}},
-  {id:8, title:"Neurologie", ctx:"Intervenție cu risc crescut",
+  {id:8,  title:"Neurologie", ctx:"Intervenție neurologică, o variantă mai sigură și una cu risc.",
    low:{safe:40,p:0.50}, high:{safe:18,p:0.20}},
-  {id:9, title:"Epidemie", ctx:"Strategie comunitară",
+  {id:9,  title:"Epidemie locală", ctx:"Măsuri pentru o comunitate, decizie cu risc și beneficii.",
    low:{safe:58,p:0.68}, high:{safe:32,p:0.42}},
-  {id:10,title:"Psihiatrie", ctx:"Tratament cu efecte adverse",
+  {id:10, title:"Efecte adverse", ctx:"Tratament cu potențial bun, dar și efecte adverse importante.",
    low:{safe:52,p:0.62}, high:{safe:24,p:0.29}}
 ];
 
 function getParams(sc){
-  return (risk_level==="high") ? sc.high : sc.low;
-}
-function digitsN(){
-  return (load_condition==="high") ? 7 : 2;
-}
-function digitsDur(){
-  return digitsN()*900 + 1500;
+  return (risk_level === "high") ? sc.high : sc.low;
 }
 
-function scenarioHTML(sc){
-  const p = getParams(sc);
-  const pct = Math.round(p.p*100);
-  const q = 100-pct;
-  if(framing_condition==="gain"){
-    return `
-      <div class="wrap scenario">
-        <h4>${sc.title}</h4>
-        <p>${sc.ctx}</p>
-        <p>Opțiunea sigură: <b>${p.safe}</b> salvați</p>
-        <p>Opțiunea riscantă: <b>${pct}%</b> șanse să fie salvați <b>${N}</b></p>
-      </div>`;
-  } else {
-    return `
-      <div class="wrap scenario">
-        <h4>${sc.title}</h4>
-        <p>${sc.ctx}</p>
-        <p>Opțiunea sigură: <b>${N-p.safe}</b> vor muri</p>
-        <p>Opțiunea riscantă: <b>${pct}%</b> șanse ca nimeni să nu moară</p>
-      </div>`;
-  }
+function digitsN(){
+  return (load_condition === "high") ? 7 : 2;
+}
+
+// durată memorare: ~900ms/cifră + buffer
+function digitsDur(){
+  return digitsN()*900 + 1500; // low ~3300ms, high ~7800ms
 }
 
 /* ===========================
-   TRIALURI
+   TEXT „POPULAR” (medic → pacient)
+   Construim două descrieri:
+   - SAFE (determinist)
+   - RISKY (probabilistic)
+   Apoi le mapăm pe A/B aleator, pe fiecare scenariu.
 =========================== */
-jsPsych.randomization.shuffle(scenarios).forEach(sc=>{
+function buildOptionTexts(sc){
+  const prm = getParams(sc);
+  const safe_saved = prm.safe;
+  const p = Math.round(prm.p * 100);
+  const q = 100 - p;
 
-  // DIGITS
+  let safeText = "";
+  let riskyText = "";
+
+  if(framing_condition === "gain"){
+    safeText = `Dacă mergem pe varianta asta, ne putem aștepta să fie salvați cam <b>${safe_saved}</b> din <b>${N}</b> pacienți.`;
+    riskyText = `Dacă alegem varianta asta, există <b>${p}%</b> șanse să fie salvați toți (<b>${N}</b>), dar și <b>${q}%</b> șanse să nu fie salvat niciunul (<b>0</b>).`;
+  } else {
+    const safe_die = N - safe_saved;
+    safeText = `Dacă mergem pe varianta asta, ne putem aștepta să moară cam <b>${safe_die}</b> din <b>${N}</b> pacienți.`;
+    riskyText = `Dacă alegem varianta asta, există <b>${p}%</b> șanse să nu moară nimeni (<b>0</b>), dar și <b>${q}%</b> șanse să moară toți (<b>${N}</b>).`;
+  }
+
+  return { safeText, riskyText, p_percent: p, safe_saved: safe_saved };
+}
+
+function scenarioPageHTML(sc, optionA, optionB){
+  return `
+    <div class="wrap scenario hpad">
+      <div class="small muted">Situația ${sc.id}/10</div>
+      <h3>${sc.title}</h3>
+      <p class="small">Domnule/Doamnă, vă explic pe scurt: <b>${sc.ctx}</b></p>
+      <p class="small">Gândiți-vă că sunt <b>${N}</b> pacienți în această situație.</p>
+
+      <hr>
+
+      <p class="small"><b>Opțiunea A:</b> ${optionA}</p>
+      <p class="small"><b>Opțiunea B:</b> ${optionB}</p>
+
+      <p class="small muted">Vă rog să alegeți varianta pe care ați merge.</p>
+    </div>
+  `;
+}
+
+/* ===========================
+   TRIALURI (10 scenarii, ordine random)
+=========================== */
+const order = jsPsych.randomization.shuffle(scenarios.slice());
+
+order.forEach(sc => {
+
+  // (1) DIGITS PRESENT
   timeline.push({
     type: jsPsychHtmlKeyboardResponse,
-    choices:"NO_KEYS",
+    choices: "NO_KEYS",
     trial_duration: digitsDur,
-    on_start:function(trial){
-      const d = genDigits(digitsN());
-      trial.stimulus = `<div class="center"><h2>${d.split("").join(" ")}</h2></div>`;
-      trial.data = {task:"digits",scenario:sc.id,target:d};
+    on_start: function(trial){
+      const target = genDigits(digitsN());
+      trial.stimulus = `
+        <div class="wrap center">
+          <p class="small muted">Ține minte cifrele (le vei scrie după ce alegi):</p>
+          <h2 style="letter-spacing:2px;">${target.split("").join(" ")}</h2>
+          <p class="small muted">Se va continua automat...</p>
+        </div>
+      `;
+      trial.data = {
+        task: "digits_present",
+        scenario_id: sc.id,
+        scenario_title: sc.title,
+        digits_n: digitsN(),
+        digits_target: target
+      };
     }
   });
 
-  // FIXATION
+  // (1b) FIXATION / RETENTION
   timeline.push({
     type: jsPsychHtmlKeyboardResponse,
-    stimulus:"<h1>+</h1>",
-    choices:"NO_KEYS",
-    trial_duration:1200
+    stimulus: `<div class="wrap center"><h1 style="font-size:52px;">+</h1></div>`,
+    choices: "NO_KEYS",
+    trial_duration: 1200,
+    data: { task: "retention_fixation", scenario_id: sc.id }
   });
 
-  // DECIZIE
+  // Prepare options A/B with variable mapping
+  const texts = buildOptionTexts(sc);
+
+  // Decide mapping (random per scenario)
+  const safeIsA = jsPsych.randomization.sampleWithoutReplacement([0,1],1)[0] === 1;
+  const optionA_text = safeIsA ? texts.safeText : texts.riskyText;
+  const optionB_text = safeIsA ? texts.riskyText : texts.safeText;
+
+  // (2) DECISION (A/B) with RT
   timeline.push({
     type: jsPsychHtmlButtonResponse,
-    stimulus: scenarioHTML(sc),
-    choices:["Sigură","Riscantă"],
-    data:{task:"decision",scenario:sc.id},
-    on_finish:d=>d.choice_risk=(d.response===1)?1:0
-  });
+    stimulus: scenarioPageHTML(sc, optionA_text, optionB_text),
+    choices: ["Aleg Opțiunea A", "Aleg Opțiunea B"],
+    data: {
+      task: "decision",
+      scenario_id: sc.id,
+      scenario_title: sc.title,
 
-  // RESPONSABILITATE
-  timeline.push({
-    type: jsPsychSurveyLikert,
-    questions:[{
-      prompt:"Cât de responsabil(ă) moral te simți?",
-      labels:["1","2","3","4","5","6","7"]
-    }],
-    on_finish:d=>d.responsibility=Object.values(d.response)[0]+1
-  });
+      // experimental conditions (repeat per row for easy analysis)
+      form_id: Number(form),
+      risk_level: risk_level,
+      load_condition: load_condition,
+      framing_condition: framing_condition,
 
-  // RECALL
-  timeline.push({
-    type: jsPsychSurveyText,
-    questions:[{prompt:"Introdu cifrele memorate:",name:"rec"}],
-    on_start:function(trial){
-      const last=jsPsych.data.get().filter({task:"digits"}).last(1).values()[0];
-      trial.data.target=last.target;
+      // mapping info (critical!)
+      safe_is_A: safeIsA ? 1 : 0,
+      optionA_type: safeIsA ? "safe" : "risky",
+      optionB_type: safeIsA ? "risky" : "safe",
+
+      // scenario params (useful covariates)
+      safe_saved: texts.safe_saved,
+      risky_success_prob: texts.p_percent
     },
-    on_finish:function(d){
-      d.recall_correct = normDigits(d.response.rec)===normDigits(d.target)?1:0;
+    on_finish: function(d){
+      d.choice_button = d.response;            // 0=A, 1=B
+      d.choice_label = (d.response === 0) ? "A" : "B";
+
+      // derive: chosen_safe / chosen_risky
+      const choseA = (d.response === 0);
+      const chosenType = choseA ? (d.safe_is_A ? "safe" : "risky")
+                                : (d.safe_is_A ? "risky" : "safe");
+      d.chosen_type = chosenType;
+      d.chose_risky = (chosenType === "risky") ? 1 : 0;
+      d.chose_safe  = (chosenType === "safe")  ? 1 : 0;
     }
   });
+
+  // (3) RESPONSIBILITY (Likert 1–7)
+  timeline.push({
+    type: jsPsychSurveyLikert,
+    questions: [{
+      prompt: "Cât de responsabil(ă) moral te simți pentru alegerea făcută?",
+      labels: ["1","2","3","4","5","6","7"],
+      required: true
+    }],
+    data: {
+      task: "responsibility",
+      scenario_id: sc.id,
+      scenario_title: sc.title,
+      form_id: Number(form),
+      risk_level,
+      load_condition,
+      framing_condition,
+      safe_is_A: safeIsA ? 1 : 0
+    },
+    on_finish: function(d){
+      const v = Object.values(d.response)[0]; // 0..6
+      d.responsibility = Number(v) + 1;       // 1..7
+    }
+  });
+
+  // (4) DIGITS RECALL
+  timeline.push({
+    type: jsPsychSurveyText,
+    questions: [{
+      prompt: "Scrie cifrele pe care le-ai ținut minte (poți pune și spații):",
+      name: "rec",
+      required: true
+    }],
+    button_label: "Continuă",
+    data: {
+      task: "digits_recall",
+      scenario_id: sc.id,
+      scenario_title: sc.title,
+      form_id: Number(form),
+      risk_level,
+      load_condition,
+      framing_condition
+    },
+    on_start: function(trial){
+      const last = jsPsych.data.get()
+        .filter({task:"digits_present", scenario_id: sc.id})
+        .last(1).values()[0];
+      trial.data.digits_target = last?.digits_target || "";
+      trial.data.digits_n = last?.digits_n || digitsN();
+    },
+    on_finish: function(d){
+      const typed = normDigits(d.response?.rec || "");
+      const target = normDigits(d.digits_target || "");
+      d.digits_typed = typed;
+      d.recall_correct = (typed === target) ? 1 : 0;
+    }
+  });
+
 });
 
 /* ===========================
-   FINAL
+   FINAL / DEBRIEF
 =========================== */
 timeline.push({
   type: jsPsychHtmlButtonResponse,
-  stimulus:"<p>Mulțumim pentru participare!</p>",
-  choices:["Finalizează"]
+  stimulus: `
+    <div class="wrap">
+      <h3>Mulțumim!</h3>
+      <p class="small">
+        Situațiile au fost ipotetice. Studiul urmărește cum prezentarea informației (formularea în termeni de câștig/pierdere)
+        și încărcarea cognitivă pot influența alegerile și responsabilitatea percepută.
+      </p>
+      <p class="small muted">După „Finalizează”, se va descărca automat un fișier CSV.</p>
+    </div>
+  `,
+  choices: ["Finalizează"]
 });
 
 jsPsych.run(timeline);
