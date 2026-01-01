@@ -1,4 +1,12 @@
-// 7.1 Digits present (CORECTAT: durată mai lungă + adaptată la load)
+// 7.1 Digits present (CORECTAT: durată mai lungă + adaptată la load) timeline.push({ type: jsPsychHtmlKeyboardResponse, choices: "NO_KEYS", // ~900ms/cifră + 1500ms buffer (mai realist pentru memorare) trial_duration: function(){ const digits_n = getDigitsN(); // 2 sau 7 return (digits_n * 900) + 1500; // low ≈ 3300ms, high ≈ 7800ms }, on_start: function(trial){ const digits_n = getDigitsN(); const target = genDigits(digits_n); trial.stimulus = `
+
+Memorează cifrele (le vei introduce după decizie)
+${target.split("").join(" ")}
+
+Se va continua automat...
+`; trial.data = { task: "digits_present", scenario_id: sc.id, scenario_title: sc.title, digits_n: digits_n, digits_target: target, risk_level: risk_level, load_condition: load_condition, framing_condition: framing_condition, form_id: Number(form) }; } }); // 7.1b Retention fixation (NOU: separă memorarea de decizie) timeline.push({ type: jsPsychHtmlKeyboardResponse, stimulus: `
++
+`, choices: "NO_KEYS", trial_duration: 1200, data: { task: "retention_fixation", scenario_id: sc.id, scenario_title: sc.title, risk_level: risk_level, load_condition: load_condition, framing_condition: framing_condition, form_id: Number(form) } }); // 7.2 Decision (RT) — rămâne la fel timeline.push({ type: jsPsychHtmlButtonResponse, stimulus: stimulusForScenario(sc, framing_condition), choices: ["Aleg opțiunea sigură", "Aleg opțiunea riscantă"], data: { task: "decision", scenario_id: sc.id, scenario_title: sc.title, risk_level: risk_level, load_condition: load_condition, framing_condition: framing_condition, form_id: Number(form) }, on_finish: function(data){ data.choice_safe_risky = (data.response === 1) ? 1 : 0; // 1=riscant, 0=sigur } }); // 7.1 Digits present (CORECTAT: durată mai lungă + adaptată la load)
 timeline.push({
   type: jsPsychHtmlKeyboardResponse,
   choices: "NO_KEYS",
