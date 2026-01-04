@@ -414,7 +414,49 @@ order.forEach(sc => {
   });
 
 });
+/* ===========================    DEMOGRAFICE =========================== */
+timeline.push({
+  type: jsPsychSurveyText,
+  questions: [
+    {
+      prompt: "Vârsta:",
+      name: "age",
+      required: true,
+      placeholder: "ex: 24"
+    }
+  ],
+  button_label: "Continuă",
+  on_finish: function(data){
+    const age = Number(data.response?.age);
+    if(isNaN(age) || age < 18 || age > 99){
+      jsPsych.endExperiment(`
+        <div class="wrap">
+          <p><b>Vârstă invalidă.</b> Reîncarcă pagina și introdu o vârstă între 18 și 99 de ani.</p>
+        </div>
+      `);
+      return;
+    }
+    jsPsych.data.addProperties({ age: age });
+  }
+});
 
+timeline.push({
+  type: jsPsychSurveyLikert,
+  questions: [{
+    prompt: "Gen:",
+    labels: ["Femeie", "Bărbat", "Altul / Prefer să nu spun"],
+    required: true
+  }],
+  data: { task: "demographics" },
+  on_finish: function(data){
+    const v = Object.values(data.response)[0]; // 0,1,2
+    const gender_map = ["female", "male", "other"];
+    jsPsych.data.addProperties({ gender: gender_map[v] });
+  }
+});
+
+
+  
 /* ===========================
    FINAL / DEBRIEF
 =========================== */
